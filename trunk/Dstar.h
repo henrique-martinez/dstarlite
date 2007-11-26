@@ -11,10 +11,13 @@
 #include <list>
 #include <ext/hash_map>
 
+#define eps 10e-10
+
 using namespace std;
 using namespace __gnu_cxx;
 
 class state {
+
  public:
   int x;
   int y;
@@ -29,21 +32,21 @@ class state {
   }
   
   bool operator > (const state &s2) const {
-    if (k.first-0.00001 > s2.k.first) return true;
-    else if (k.first < s2.k.first-0.00001) return false;
+    if (k.first-eps > s2.k.first) return true;
+    else if (k.first < s2.k.first-eps) return false;
     return k.second > s2.k.second;
   }
 
   bool operator <= (const state &s2) const {
     if (k.first < s2.k.first) return true;
     else if (k.first > s2.k.first) return false;
-    return k.second < s2.k.second + 0.00001;
+    return k.second < s2.k.second + eps;
   }
   
 
   bool operator < (const state &s2) const {
-    if (k.first + 0.000001 < s2.k.first) return true;
-    else if (k.first - 0.000001 > s2.k.first) return false;
+    if (k.first + eps < s2.k.first) return true;
+    else if (k.first - eps > s2.k.first) return false;
     return k.second < s2.k.second;
   }
    
@@ -59,6 +62,7 @@ struct cellInfo {
   double rhs;
   double cost;
 
+
 };
 
 class state_hash {
@@ -73,6 +77,16 @@ typedef priority_queue<state, vector<state>, greater<state> > ds_pq;
 typedef hash_map<state,cellInfo, state_hash, equal_to<state> > ds_ch;
 typedef hash_map<state, float, state_hash, equal_to<state> > ds_oh;
 
+typedef struct{
+  list<state> path;
+  double cost;
+
+  void clear(){
+    path.clear();
+    cost = 0.0;
+  }
+
+} ds_path;
 
 class Dstar {
   
@@ -84,14 +98,14 @@ class Dstar {
   void   updateStart(int x, int y);
   void   updateGoal(int x, int y);
   bool   replan();
-  void   draw();
-  void   drawCell(state s,float z);
+  void   draw() const;
+  void   drawCell(const state &s,float z) const;
 
-  list<state> getPath();
+  ds_path &getPath();
   
  private:
   
-  list<state> path;
+  ds_path path;
 
   double C1;
   double k_m;
@@ -102,26 +116,27 @@ class Dstar {
   ds_ch cellHash;
   ds_oh openHash;
 
-  bool   close(double x, double y);
-  void   makeNewCell(state u);
-  double getG(state u);
-  double getRHS(state u);
-  void   setG(state u, double g);
-  double setRHS(state u, double rhs);
-  double eightCondist(state a, state b);
+  bool   near(double x, double y) const;
+  void   makeNewCell(const state &u);
+  double getG(const state &u) const;
+  double getRHS(const state &u) const;
+  void   setG(const state &u, double g);
+  void   setRHS(const state &u, double rhs);
+  double eightCondist(const state &a, const state &b) const;
   int    computeShortestPath();
-  void   updateVertex(state u);
-  void   insert(state u);
-  void   remove(state u);
-  double trueDist(state a, state b);
-  double heuristic(state a, state b);
-  state  calculateKey(state u);
-  void   getSucc(state u, list<state> &s);
-  void   getPred(state u, list<state> &s);
-  double cost(state a, state b); 
-  bool   occupied(state u);
-  bool   isValid(state u);
-  float  keyHashCode(state u);
+  void   updateVertex(state &u);
+  void   insert(state &u);
+  void   remove(const state &u);
+  double trueDist(const state &a, const state &b) const;
+  double heuristic(const state &a, const state &b) const;
+  state  &calculateKey(state &u) const;
+  void   getSucc(state u, list<state> &s) const;
+  void   getPred(state u, list<state> &s) const;
+  double cost(const state &a, const state &b) const; 
+  bool   occupied(const state &u) const;
+  bool   isValid(const state &u) const;
+  bool   isConsistent(const state &u);
+  float  keyHashCode(const state &u) const;
 };
 
 #endif
