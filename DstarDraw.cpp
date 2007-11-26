@@ -98,10 +98,39 @@ void keyPressed(unsigned char key, int x, int y)
   case 'C':
     dstar->init(40,50,140, 90);
     break;
+  case 'p':
+  case 'P':
+    {
+      ds_path path = dstar->getPath();
+      printf("Path cost = %g\n", path.cost);
+    }
+    break;
   }
-    
 }
 
+void clickCell(int x, int y, double cost) {
+
+  
+  dstar->updateCell(x, y, cost);  
+  x++;
+  dstar->updateCell(x, y, cost);  
+  y++;
+  dstar->updateCell(x, y, cost); 
+  x--;
+  dstar->updateCell(x, y, cost);  
+  x--;
+  dstar->updateCell(x, y, cost);  
+  y--;
+  dstar->updateCell(x, y, cost);  
+  y--;
+  dstar->updateCell(x, y, cost); 
+  x++;
+  dstar->updateCell(x, y, cost);  
+  x++;
+  dstar->updateCell(x, y, cost);
+  
+
+}
 void mouseFunc(int button, int state, int x, int y) {
   
   y = hh -y+scale/2;
@@ -111,7 +140,7 @@ void mouseFunc(int button, int state, int x, int y) {
 
   if ((mstate = state) == GLUT_DOWN) {
     if (button == GLUT_LEFT_BUTTON) {
-      dstar->updateCell(x/scale, y/scale, -1);
+      clickCell(x/scale, y/scale, -1);
     } else if (button == GLUT_RIGHT_BUTTON) {
       dstar->updateStart(x/scale, y/scale);
     } else if (button == GLUT_MIDDLE_BUTTON) {
@@ -130,7 +159,7 @@ void mouseMotionFunc(int x, int y)  {
   
   if (mstate == GLUT_DOWN) {
     if (mbutton == GLUT_LEFT_BUTTON) {
-      dstar->updateCell(x, y, -1);
+      clickCell(x, y, -1);
     } else if (mbutton == GLUT_RIGHT_BUTTON) {
       dstar->updateStart(x, y);
     } else if (mbutton == GLUT_MIDDLE_BUTTON) {
