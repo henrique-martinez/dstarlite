@@ -13,6 +13,8 @@
 #endif
 #endif
 
+#include "drawutils.h"
+
 /* void Dstar::Dstar()
  * --------------------------
  * Constructor sets constants.
@@ -21,31 +23,34 @@ Dstar::Dstar() {
 
   maxSteps = 80000;  // node expansions before we give up
   C1       = 1;      // cost of an unseen cell
-
 }
 
-/* float Dstar::keyHashCode(state u) 
- * -------------------------- 
- * Returns the key hash code for the state u, this is used to compare
- * a state that have been updated
- */
-float Dstar::keyHashCode(const state &u) const {
 
-  return (float)(u.k.first + 1193*u.k.second);
-
-}
-
-/* bool Dstar::isValid(state u) 
+/* bool Dstar::queuePop() {
  * --------------------------
- * Returns true if state u is on the open list or not by checking if
- * it is in the hash table.
+ * Pop value of the priority Queue, return false if cell is outdated.
+ * Used for lazy delete.
  */
-bool Dstar::isValid(const state &u) const {
+bool Dstar::queuePop() {
   
-  ds_oh::const_iterator cur = openHash.find(u);
-  if (cur == openHash.end()) return false;
-  if (!near(keyHashCode(u), cur->second)) return false;
-  return true;
+  state u = openList.top();
+  openList.pop();
+  ds_oh::iterator cur = openHash.find(u);  
+  bool b_recent = false;
+  
+  if (cur == openHash.end()) {
+    fprintf(stderr,"queuePop(): assertion failed\n");
+    return false; // should never happen
+  }
+
+  cur->second.v[0]--; // remove, decrease # in Q
+  if (u.num == cur->second.v[1]) { // u is most recent
+    b_recent = true; // equal most recent num?
+  }
+  
+  if (cur->second.v[0] == 0) openHash.erase(cur); // that was last cell
+  
+  return b_recent;
   
 }
 
@@ -210,17 +215,17 @@ int Dstar::computeShortestPath() {
   int k=0;
   while ((!openList.empty()) && 
          (openList.top() < (calculateKey(s_start))) || 
-	 (!isConsistent(s_start))) {
+         (!isConsistent(s_start))) {
     //(getRHS(s_start) != getG(s_start))) {
 
     if (k++ > maxSteps) {
       fprintf(stderr, "At maxsteps\n");
       return -1;
     }
-
-
+    
+    
     state u;
-
+    
     // check consistency (one of the loop conditions)
     bool test = isConsistent(s_start);
     //(getRHS(s_start) != getG(s_start));
@@ -229,19 +234,15 @@ int Dstar::computeShortestPath() {
     while(1) { 
       if (openList.empty()) return 1; // checks outer loop condition #1
       u = openList.top();
-      openList.pop();
       
-      if (!isValid(u)) continue;
+      if (!queuePop()) continue;
+      
       if (!(u < s_start) && test){
-	return 2; // checks outer loop conditions #2,3 still hold
+        return 2; // checks outer loop conditions #2,3 still hold
       }
       break;
     }
     
-    // At this point, the top-most valid state is popped
-    ds_oh::iterator cur = openHash.find(u);
-    openHash.erase(cur);
-
     state k_old = u;
 
     if (k_old < calculateKey(u)) { // u is out of date
@@ -309,23 +310,26 @@ void Dstar::updateVertex(state &u) {
  * --------------------------
  * Inserts state u into openList and openHash.
  */
-void Dstar::insert(state &u) {
+void Dstar::insert(state u) {
   
   ds_oh::iterator cur;
-  float csum;
-
-  calculateKey(u);
   cur  = openHash.find(u);
-  csum = keyHashCode(u);  //TODO: check if unique hash code here (check state as well)
+  int num;
 
-  // return if cell is already in list. TODO: this should be
-  // uncommented except it introduces a bug, I suspect that there is a
-  // bug somewhere else and having duplicates in the openList queue
-  // hides the problem...
-  if ((cur != openHash.end()) && (near(csum,cur->second))) return;
-
-  openHash[state(u)] = csum;
-  openList.push(state(u));
+  if (cur == openHash.end()) {
+    num = 1;
+    ivec2 val;
+    val.v[0] = val.v[1] = 1;
+    openHash[u] = val;
+  } else {
+    cur->second.v[0]++;
+    cur->second.v[1] = cur->second.v[0];
+    num = cur->second.v[0];
+  }
+  
+  calculateKey(u);
+  u.num = num;
+  openList.push(u);
 } 
 
 /* void Dstar::remove(state u)
@@ -337,7 +341,7 @@ void Dstar::remove(const state &u) {
   
   ds_oh::iterator cur = openHash.find(u);
   if (cur == openHash.end()) return;
-  openHash.erase(cur);
+  else cur->second.v[1]++; // inc most recent flag 
 
 }
 
@@ -416,7 +420,7 @@ void Dstar::updateCell(int x, int y, double val) {
 
   // if the value is still the same, don't need to do anything
   if( near(cellHash[u].cost, val) )  return;
-
+  
   makeNewCell(u);
   cellHash[u].cost = val;
 
@@ -573,11 +577,11 @@ void Dstar::updateGoal(int x, int y) {
 bool Dstar::replan() {
 
   path.clear(); 
-
+  
   int res = computeShortestPath();
   //printf("res: %d ols: %d ohs: %d tk: [%f %f] sk: [%f %f] sgr: (%f,%f)\n",res,openList.size(),openHash.size(),openList.top().k.first,openList.top().k.second, s_start.k.first, s_start.k.second,getRHS(s_start),getG(s_start));
   if (res < 0) {
-    fprintf(stderr, "NO PATH TO GOAL\n");
+    //fprintf(stderr, "NO PATH TO GOAL\n");
     path.cost = INFINITY;
     return false;
   }
@@ -588,7 +592,7 @@ bool Dstar::replan() {
   state prev = s_start;
 
   if (isinf(getG(s_start))) {
-    fprintf(stderr, "NO PATH TO GOAL\n");
+    //fprintf(stderr, "NO PATH TO GOAL\n");
     path.cost = INFINITY;
     return false;
   }
@@ -601,7 +605,7 @@ bool Dstar::replan() {
     getSucc(cur, n);
 
     if (n.empty()) {
-      fprintf(stderr, "NO PATH TO GOAL\n");
+      //fprintf(stderr, "NO PATH TO GOAL\n");
       path.cost = INFINITY;
       return false;
     }
@@ -662,12 +666,33 @@ void Dstar::draw() const {
   drawCell(s_goal,0.45);
 
   for(iter1=openHash.begin(); iter1 != openHash.end(); iter1++) {
-    glColor3f(0.4,0,0.8);
+    if (iter1->second.v[0] < iter1->second.v[1]) glColor3f(0.9,0.9,0.9);
+    else glColor3f(0.0,0.0,0.0);
     drawCell(iter1->first, 0.2);
   }
 
-  
+  glColor3f(0,0,1);
+  drawCell(qstate, .45);
+
   glEnd();
+
+  
+  char str[256];
+
+  iter1 = openHash.find(qstate);
+  iter  = cellHash.find(qstate);
+  
+  sprintf(str,"cell: (%d,%d)\n", qstate.x, qstate.y);
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,.05);
+
+  if (iter1 == openHash.end()) sprintf(str,"openHash: NO [0,0] \n");
+  else sprintf(str,"openHash: YES [%d,%d] \n", iter1->second.v[0], iter1->second.v[1]);
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,0.03);
+
+  if (iter == cellHash.end()) sprintf(str,"cellHash: NO g,rhs,cost: [%f,%f,%f] \n", getG(qstate), getRHS(qstate), C1);
+  else sprintf(str,"cellHash: YES g,rhs,cost: [%f,%f,%f] \n", iter->second.g, iter->second.rhs, iter->second.cost);  
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,0.01);
+
 
   glLineWidth(4);
   glBegin(GL_LINE_STRIP);
@@ -685,7 +710,6 @@ void Dstar::drawCell(const state &s, float size) const {
   float x = s.x;
   float y = s.y;
   
-  
   glVertex2f(x - size, y - size);
   glVertex2f(x + size, y - size);
   glVertex2f(x + size, y + size);
@@ -694,7 +718,16 @@ void Dstar::drawCell(const state &s, float size) const {
 
 }
 
+void Dstar::queryCell(int x, int y) {
+  
+  
+  qstate.x = x;
+  qstate.y = y;
+  
+}
+
 #else
+void Dstar::queryCell(int x, int y) const {}
 void Dstar::draw() const {}
 void Dstar::drawCell(const state &s, float z) const {}
 #endif

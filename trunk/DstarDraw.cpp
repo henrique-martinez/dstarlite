@@ -2,6 +2,7 @@
  * James Neufeld (neufeld@cs.ualberta.ca)
  */
 
+// Header stuff
 #ifdef MACOS
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -17,6 +18,7 @@
 
 int hh, ww;
 
+
 int window; 
 Dstar *dstar;
 
@@ -24,7 +26,11 @@ int scale = 6;
 int mbutton = 0;
 int mstate = 0;
 
-bool b_autoreplan = true;
+
+bool b_autoreplan = true, b_examine_mode=false;
+
+// end header
+
 
 void InitGL(int Width, int Height)
 {
@@ -75,6 +81,11 @@ void DrawGLScene()
 
 }
 
+void examine_cell(int x, int y) {
+  
+  dstar->queryCell(x,y);
+
+}
 
 void keyPressed(unsigned char key, int x, int y) 
 {
@@ -99,11 +110,14 @@ void keyPressed(unsigned char key, int x, int y)
     dstar->init(40,50,140, 90);
     break;
   case 'p':
-  case 'P':
-    {
-      ds_path path = dstar->getPath();
-      printf("Path cost = %g\n", path.cost);
-    }
+  case 'P': {
+    ds_path path = dstar->getPath();
+    printf("Path cost = %g\n", path.cost);
+    break;
+  }
+  case 'e':
+  case 'E':
+    b_examine_mode = !b_examine_mode;
     break;
   }
 }
@@ -136,15 +150,20 @@ void mouseFunc(int button, int state, int x, int y) {
   y = hh -y+scale/2;
   x += scale/2;
 
+  y /= scale;
+  x /= scale;
   mbutton = button;
 
   if ((mstate = state) == GLUT_DOWN) {
-    if (button == GLUT_LEFT_BUTTON) {
-      clickCell(x/scale, y/scale, -1);
+    
+    if (b_examine_mode) {
+      examine_cell(x,y);
+    } else if (button == GLUT_LEFT_BUTTON) {
+      clickCell(x, y, -1);
     } else if (button == GLUT_RIGHT_BUTTON) {
-      dstar->updateStart(x/scale, y/scale);
+      dstar->updateStart(x, y);
     } else if (button == GLUT_MIDDLE_BUTTON) {
-      dstar->updateGoal(x/scale, y/scale);
+      dstar->updateGoal(x, y);
     }
   }
 }
@@ -158,7 +177,9 @@ void mouseMotionFunc(int x, int y)  {
   x /= scale;
   
   if (mstate == GLUT_DOWN) {
-    if (mbutton == GLUT_LEFT_BUTTON) {
+    if (b_examine_mode) {
+      examine_cell(x,y);
+    } else if (mbutton == GLUT_LEFT_BUTTON) {
       clickCell(x, y, -1);
     } else if (mbutton == GLUT_RIGHT_BUTTON) {
       dstar->updateStart(x, y);
@@ -196,6 +217,7 @@ int main(int argc, char **argv) {
   printf("[q/Q] - Quit\n");
   printf("[r/R] - Replan\n");
   printf("[a/A] - Toggle Auto Replan\n");
+  printf("[e/E] - Toggle Examine Cell Mode\n");
   printf("[c/C] - Clear (restart)\n");
   printf("left mouse click - make cell untraversable (cost -1)\n");
   printf("middle mouse click - move goal to cell\n");
