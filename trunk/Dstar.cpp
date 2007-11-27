@@ -293,10 +293,9 @@ void Dstar::updateVertex(state &u) {
       tmp2 = getG(*i) + cost(u,*i);
       if (tmp2 < tmp) tmp = tmp2;
     }
-    //if (!near(getRHS(u),tmp))
-      setRHS(u,tmp);
+    if (!near(getRHS(u),tmp)) setRHS(u,tmp);
   }
-
+  
   if (!near(getG(u),getRHS(u))) insert(u);
   else remove(u);
 
@@ -320,12 +319,15 @@ void Dstar::insert(state u) {
     openHash[u] = val;
   } else {
     cur->second.v[0]++;
-    cur->second.v[1] = cur->second.v[0];
-    num = cur->second.v[0];
+    cur->second.v[1]++;
+    num = cur->second.v[1];
   }
   
   calculateKey(u);
   u.num = num;
+
+  
+
   openList.push(u);
 } 
 
@@ -657,13 +659,13 @@ void Dstar::draw() const {
     if (iter->second.cost == 1) glColor3f(0,1,0);
     else if (iter->second.cost < 0 ) glColor3f(1,0,0);
     else glColor3f(0,0,1);
-    drawCell(iter->first,0.45);
+    drawCell(iter->first,0.5);
   }
 
   glColor3f(1,1,0);
-  drawCell(s_start,0.45);
+  drawCell(s_start,0.5);
   glColor3f(1,0,1);
-  drawCell(s_goal,0.45);
+  drawCell(s_goal,0.5);
 
   for(iter1=openHash.begin(); iter1 != openHash.end(); iter1++) {
     if (iter1->second.v[0] < iter1->second.v[1]) glColor3f(0.9,0.9,0.9);
@@ -693,16 +695,31 @@ void Dstar::draw() const {
   iter1 = openHash.find(qstate);
   iter  = cellHash.find(qstate);
   
-  sprintf(str,"cell: (%d,%d)\n", qstate.x, qstate.y);
-  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,.05);
+  float cury=0.01;
 
+  ds_pq Q = openList;
+  while(!Q.empty()) {
+    t = Q.top();
+    Q.pop();
+    
+    if (t == qstate) {
+      sprintf(str,"openList: %d [%f,%f] \n", t.num, t.k.first, t.k.second);
+      DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,cury+=0.02);
+    }
+  }
+  
   if (iter1 == openHash.end()) sprintf(str,"openHash: NO [0,0] \n");
   else sprintf(str,"openHash: YES [%d,%d] \n", iter1->second.v[0], iter1->second.v[1]);
-  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,0.03);
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,cury+=0.02);
 
   if (iter == cellHash.end()) sprintf(str,"cellHash: NO g,rhs,cost: [%f,%f,%f] \n", getG(qstate), getRHS(qstate), C1);
   else sprintf(str,"cellHash: YES g,rhs,cost: [%f,%f,%f] \n", iter->second.g, iter->second.rhs, iter->second.cost);  
-  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,0.01);
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,cury+=0.02);
+
+
+  sprintf(str,"cell: (%d,%d)\n", qstate.x, qstate.y);
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_12,1,1,1,0.01,cury+=0.02);
+
 
 
   glLineWidth(4);

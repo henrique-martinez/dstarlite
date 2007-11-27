@@ -15,10 +15,12 @@
 
 #include <unistd.h>
 #include "Dstar.h"
+#include "drawutils.h"
+
 
 int hh, ww;
 
-
+float cost = -1;
 int window; 
 Dstar *dstar;
 
@@ -64,6 +66,8 @@ void ReSizeGLScene(int Width, int Height)
 void DrawGLScene()
 {
 
+  char str[256];
+
   usleep(100);
 
   glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -73,6 +77,10 @@ void DrawGLScene()
   glScaled(scale,scale,1);
 
   if (b_autoreplan) dstar->replan();
+  if (b_examine_mode) sprintf(str,"Examine Mode");
+  else sprintf(str,"Cost draw mode: %f",cost);
+
+  DisplayStr(str,GLUT_BITMAP_HELVETICA_18,1,1,1,0.01,0.92);
 
   dstar->draw();
   
@@ -119,10 +127,25 @@ void keyPressed(unsigned char key, int x, int y)
   case 'E':
     b_examine_mode = !b_examine_mode;
     break;
+  case '=':
+  case '+':
+    if (cost > 0) cost = 1000;
+    else cost = 1;
+    break;
+  case '-':
+  case '_':
+    if (cost > 1) cost = 1;
+    else cost = -1;
+   break;
+  case '0':
+  case ')':
+    cost = -1;
+    break;
+    
   }
 }
 
-void clickCell(int x, int y, double cost) {
+void clickCell(int x, int y) {
 
   
   dstar->updateCell(x, y, cost);  
@@ -159,7 +182,7 @@ void mouseFunc(int button, int state, int x, int y) {
     if (b_examine_mode) {
       examine_cell(x,y);
     } else if (button == GLUT_LEFT_BUTTON) {
-      clickCell(x, y, -1);
+      clickCell(x, y);
     } else if (button == GLUT_RIGHT_BUTTON) {
       dstar->updateStart(x, y);
     } else if (button == GLUT_MIDDLE_BUTTON) {
@@ -180,7 +203,7 @@ void mouseMotionFunc(int x, int y)  {
     if (b_examine_mode) {
       examine_cell(x,y);
     } else if (mbutton == GLUT_LEFT_BUTTON) {
-      clickCell(x, y, -1);
+      clickCell(x, y);
     } else if (mbutton == GLUT_RIGHT_BUTTON) {
       dstar->updateStart(x, y);
     } else if (mbutton == GLUT_MIDDLE_BUTTON) {
