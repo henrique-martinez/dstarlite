@@ -12,8 +12,8 @@ endif
 
 all:dstar
 
-dstar: Dstar.h Dstar.cpp DstarDraw.cpp
-	g++ ${FLAGS} Dstar.cpp DstarDraw.cpp -o dstar ${LIBS} ${DEFS}
+dstar: Dstar.h Dstar.cpp DstarDraw.cpp 
+	g++ ${FLAGS} Dstar.cpp DstarDraw.cpp drawutils.cpp -o dstar ${LIBS} ${DEFS}
 
 clean:
 	rm -f dstar
