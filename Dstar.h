@@ -22,7 +22,8 @@ class state {
   int x;
   int y;
   pair<double,double> k;
-  
+  int num;
+
   bool operator == (const state &s2) const {
     return ((x == s2.x) && (y == s2.y));
   }
@@ -56,12 +57,18 @@ struct ipoint2 {
   int x,y;
 };
 
+struct ivec2 {
+  int v[2];
+};
+
+
+
 struct cellInfo {
 
   double g;
   double rhs;
   double cost;
-
+  
 
 };
 
@@ -73,9 +80,9 @@ class state_hash {
 };
 
 
+typedef hash_map<state, cellInfo, state_hash, equal_to<state> > ds_ch;
+typedef hash_map<state, ivec2, state_hash, equal_to<state> > ds_oh;
 typedef priority_queue<state, vector<state>, greater<state> > ds_pq;
-typedef hash_map<state,cellInfo, state_hash, equal_to<state> > ds_ch;
-typedef hash_map<state, float, state_hash, equal_to<state> > ds_oh;
 
 typedef struct{
   list<state> path;
@@ -91,7 +98,7 @@ typedef struct{
 class Dstar {
   
  public:
-    
+
   Dstar();
   void   init(int sX, int sY, int gX, int gY);
   void   updateCell(int x, int y, double val);
@@ -100,6 +107,7 @@ class Dstar {
   bool   replan();
   void   draw() const;
   void   drawCell(const state &s,float z) const;
+  void   queryCell(int x, int y);
 
   ds_path &getPath();
   
@@ -111,6 +119,8 @@ class Dstar {
   double k_m;
   state s_start, s_goal, s_last;
   int maxSteps;  
+
+  state qstate;
 
   ds_pq openList;
   ds_ch cellHash;
@@ -125,7 +135,7 @@ class Dstar {
   double eightCondist(const state &a, const state &b) const;
   int    computeShortestPath();
   void   updateVertex(state &u);
-  void   insert(state &u);
+  void   insert(state u);
   void   remove(const state &u);
   double trueDist(const state &a, const state &b) const;
   double heuristic(const state &a, const state &b) const;
@@ -134,9 +144,8 @@ class Dstar {
   void   getPred(state u, list<state> &s) const;
   double cost(const state &a, const state &b) const; 
   bool   occupied(const state &u) const;
-  bool   isValid(const state &u) const;
+  bool   queuePop();
   bool   isConsistent(const state &u);
-  float  keyHashCode(const state &u) const;
 };
 
 #endif
