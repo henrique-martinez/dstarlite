@@ -216,7 +216,6 @@ int Dstar::computeShortestPath() {
   while ((!openList.empty()) && 
          (openList.top() < (calculateKey(s_start))) || 
          (!isConsistent(s_start))) {
-    //(getRHS(s_start) != getG(s_start))) {
 
     if (k++ > maxSteps) {
       fprintf(stderr, "At maxsteps\n");
@@ -294,15 +293,13 @@ void Dstar::updateVertex(state &u) {
       tmp2 = getG(*i) + cost(u,*i);
       if (tmp2 < tmp) tmp = tmp2;
     }
-    if (!near(getRHS(u),tmp)) setRHS(u,tmp);
+    //if (!near(getRHS(u),tmp))
+      setRHS(u,tmp);
   }
 
-  // remove u from the hashList if it is there
-  // (it will be lazily removed from the openList later)
-  remove(u);
-  
   if (!near(getG(u),getRHS(u))) insert(u);
-  
+  else remove(u);
+
 }
 
 
@@ -419,7 +416,8 @@ void Dstar::updateCell(int x, int y, double val) {
   if ((u == s_start) || (u == s_goal)) return;
 
   // if the value is still the same, don't need to do anything
-  if( near(cellHash[u].cost, val) )  return;
+  ds_ch::iterator cur = cellHash.find(u);
+  if ((cur != cellHash.end()) && (near(cur->second.cost,val))) return;
   
   makeNewCell(u);
   cellHash[u].cost = val;
@@ -579,7 +577,8 @@ bool Dstar::replan() {
   path.clear(); 
   
   int res = computeShortestPath();
-  //printf("res: %d ols: %d ohs: %d tk: [%f %f] sk: [%f %f] sgr: (%f,%f)\n",res,openList.size(),openHash.size(),openList.top().k.first,openList.top().k.second, s_start.k.first, s_start.k.second,getRHS(s_start),getG(s_start));
+  //  printf("res: %d ols: %d ohs: %d tk: [%f %f] sk: [%f %f] sgr: (%f,%f)\n",res,openList.size(),openHash.size(),openList.top().k.first,openList.top().k.second, s_start.k.first, s_start.k.second,getRHS(s_start),getG(s_start));
+
   if (res < 0) {
     //fprintf(stderr, "NO PATH TO GOAL\n");
     path.cost = INFINITY;
@@ -652,6 +651,7 @@ void Dstar::draw() const {
 
   list<state>::const_iterator iter2;
   
+
   glBegin(GL_QUADS);
   for(iter=cellHash.begin(); iter != cellHash.end(); iter++) {
     if (iter->second.cost == 1) glColor3f(0,1,0);
@@ -670,6 +670,17 @@ void Dstar::draw() const {
     else glColor3f(0.0,0.0,0.0);
     drawCell(iter1->first, 0.2);
   }
+
+  /*
+  ds_pq Q = openList;
+  while(!Q.empty()) {
+    t = Q.top();
+    Q.pop();
+  
+    glColor3f(0.0,0.0,1.0);
+    drawCell(t, 0.15);
+  }
+  */
 
   glColor3f(0,0,1);
   drawCell(qstate, .45);
