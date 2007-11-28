@@ -95,12 +95,14 @@ void Dstar::init(int sX, int sY, int gX, int gY) {
   s_goal.y  = gY;
 
   cellInfo tmp;
-  tmp.g = tmp.rhs =  0;
+  tmp.rhs = 0;
+  tmp.g = INFINITY;
   tmp.cost = C1;
 
   cellHash[s_goal] = tmp;
+  insert(s_goal);
 
-  tmp.g = tmp.rhs = heuristic(s_start,s_goal);
+  tmp.g = tmp.rhs = INFINITY; //heuristic(s_start,s_goal);
   tmp.cost = C1;
   cellHash[s_start] = tmp;
   calculateKey(s_start);
@@ -117,7 +119,7 @@ void Dstar::makeNewCell(const state &u) {
   if (cellHash.find(u) != cellHash.end()) return;
 
   cellInfo tmp;
-  tmp.g       = tmp.rhs = heuristic(u,s_goal);
+  tmp.g       = tmp.rhs = INFINITY; //heuristic(u,s_goal);
   tmp.cost    = C1;
   cellHash[u] = tmp;
   
@@ -131,7 +133,7 @@ double Dstar::getG(const state &u) const {
 
   ds_ch::const_iterator cur = cellHash.find(u);
   if ( cur == cellHash.end() ) 
-    return heuristic(u,s_goal);
+    return INFINITY; //heuristic(u,s_goal);
   return cur->second.g;
   //return cellHash[u].g;
   
@@ -143,11 +145,11 @@ double Dstar::getG(const state &u) const {
  */
 double Dstar::getRHS(const state &u) const {
 
-  if (u == s_goal) return 0;  
+  //if (u == s_goal) return 0;  
 
   ds_ch::const_iterator cur = cellHash.find(u);
   if (cur == cellHash.end()) 
-    return heuristic(u,s_goal);
+    return INFINITY; //heuristic(u,s_goal);
   return cur->second.rhs;
   //return cellHash[u].rhs;
   
@@ -159,8 +161,9 @@ double Dstar::getRHS(const state &u) const {
  */
 void Dstar::setG(const state &u, double g) {
   
-  makeNewCell(u);  
+  makeNewCell(u); // makes a cell if one doesn't exist here yet
   cellHash[u].g = g; 
+
 }
 
 /* void Dstar::setRHS(state u, double rhs)
@@ -169,7 +172,7 @@ void Dstar::setG(const state &u, double g) {
  */
 void Dstar::setRHS(const state &u, double rhs) {
   
-  makeNewCell(u);
+  makeNewCell(u); // makes a cell if one doesn't exist here yet
   cellHash[u].rhs = rhs;
 
 }
@@ -236,9 +239,8 @@ int Dstar::computeShortestPath() {
       
       if (!queuePop()) continue;
       
-      if (!(u < s_start) && test){
-        return 2; // checks outer loop conditions #2,3 still hold
-      }
+      if (!(u < s_start) && test) return 2; // checks outer loop conditions #2,3 still hold
+    
       break;
     }
     
@@ -269,9 +271,9 @@ int Dstar::computeShortestPath() {
  * Returns true if x and y are within 10e-10, false otherwise
  */
 bool Dstar::near(double x, double y) const {
-    
+
   if (isinf(x) && isinf(y)) return true;
-  return (fabs(x-y) < 10e-10);
+  return (fabs(x-y) < eps);
   
 }
 
@@ -283,7 +285,7 @@ void Dstar::updateVertex(state &u) {
 
   list<state> s;
   list<state>::iterator i;
- 
+
   if (u != s_goal) {
     getSucc(u,s);
     double tmp = INFINITY;
@@ -293,9 +295,10 @@ void Dstar::updateVertex(state &u) {
       tmp2 = getG(*i) + cost(u,*i);
       if (tmp2 < tmp) tmp = tmp2;
     }
-    if (!near(getRHS(u),tmp)) setRHS(u,tmp);
+    //if (!near(getRHS(u),tmp))
+    setRHS(u,tmp);
   }
-  
+
   if (!near(getG(u),getRHS(u))) insert(u);
   else remove(u);
 
@@ -307,7 +310,7 @@ void Dstar::updateVertex(state &u) {
  * Inserts state u into openList and openHash.
  */
 void Dstar::insert(state u) {
-  
+
   ds_oh::iterator cur;
   cur  = openHash.find(u);
   int num;
@@ -319,15 +322,12 @@ void Dstar::insert(state u) {
     openHash[u] = val;
   } else {
     cur->second.v[0]++;
-    cur->second.v[1]++;
+    cur->second.v[1]++; // = cur->second.v[0];
     num = cur->second.v[1];
   }
   
   calculateKey(u);
   u.num = num;
-
-  
-
   openList.push(u);
 } 
 
@@ -373,7 +373,7 @@ double Dstar::heuristic(const state &a, const state &b) const {
 state &Dstar::calculateKey(state &u) const {
   
   double val = fmin(getRHS(u),getG(u));
-  
+
   u.k.first  = val + heuristic(u,s_start) + k_m;
   u.k.second = val;
 
@@ -397,6 +397,7 @@ double Dstar::cost(const state &a, const state &b) const {
 
   ds_ch::const_iterator cur = cellHash.find(a);
   if( cur == cellHash.end() ) return scale*C1;
+  if( (cur->second).cost < 0 ) return INFINITY;
   return scale*(cur->second).cost;
 
   //if (cellHash.count(a) == 0) return scale*C1;
@@ -423,7 +424,7 @@ void Dstar::updateCell(int x, int y, double val) {
   
   makeNewCell(u);
   cellHash[u].cost = val;
-
+  
   updateVertex(u);
 }
 
@@ -502,10 +503,11 @@ void Dstar::updateStart(int x, int y) {
   s_start.y = y;
   
   k_m += heuristic(s_last,s_start);
-
+  
+  setRHS(s_start,INFINITY);
+  setG(s_start,INFINITY);
   s_start = calculateKey(s_start);
   s_last  = s_start;
-  
 }
 
 /* void Dstar::updateGoal(int x, int y)
@@ -550,6 +552,7 @@ void Dstar::updateGoal(int x, int y) {
   tmp.cost = C1;
 
   cellHash[s_goal] = tmp;
+  insert(s_goal);
 
   tmp.g = tmp.rhs = heuristic(s_start,s_goal);
   tmp.cost = C1;
@@ -617,13 +620,14 @@ bool Dstar::replan() {
     
     for (i=n.begin(); i!=n.end(); i++) {
   
-      //if (occupied(*i)) continue;
+      if (occupied(*i)) continue;
       double val  = cost(cur,*i);
       double val2 = trueDist(*i,s_goal) + trueDist(s_start,*i); // (Euclidean) cost to goal + cost to pred
-      val += getG(*i);
-
-      if (near(val,cmin)) {
-        if (tmin > val2) {
+      double val3 = getG(*i);
+      val += val3;
+      
+      if (!isinf(val) && near(val,cmin)) {
+        if (val2 < tmin) { // tiebreak if val==cmin
           tmin = val2;
           cmin = val;
           smin = *i;
@@ -635,6 +639,7 @@ bool Dstar::replan() {
       }
     }
     n.clear();
+    if( isinf(cmin) ) break;
     prev = cur;
     cur = smin;
   }
@@ -672,8 +677,7 @@ void Dstar::draw() const {
     else glColor3f(0.0,0.0,0.0);
     drawCell(iter1->first, 0.2);
   }
-
-  /*
+ /*
   ds_pq Q = openList;
   while(!Q.empty()) {
     t = Q.top();

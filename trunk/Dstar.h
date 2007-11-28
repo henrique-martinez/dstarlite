@@ -11,7 +11,7 @@
 #include <list>
 #include <ext/hash_map>
 
-#define eps 10e-10
+#define eps (10e-10)
 
 using namespace std;
 using namespace __gnu_cxx;
