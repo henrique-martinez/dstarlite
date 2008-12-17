@@ -614,10 +614,14 @@ bool Dstar::replan() {
       return false;
     }
 
+    // choose the next node in the path by selecting the one with smallest 
+    // g() + cost. Break ties by choosing the neighbour that is closest
+    // to the line between start and goal (i.e. smallest sum of Euclidean 
+    // distances to start and goal).
     double cmin = INFINITY;
     double tmin = INFINITY;
     state smin = cur;
-    
+
     for (i=n.begin(); i!=n.end(); i++) {
   
       if (occupied(*i)) continue;
@@ -626,23 +630,31 @@ bool Dstar::replan() {
       double val3 = getG(*i);
       val += val3;
       
+      // tiebreak if curent neighbour is equal to current best
+      // choose the neighbour that has the smallest tmin value
       if (!isinf(val) && near(val,cmin)) {
-        if (val2 < tmin) { // tiebreak if val==cmin
+        if (val2 < tmin) { 
           tmin = val2;
           cmin = val;
           smin = *i;
         }
-      } else if (val < cmin) {
+      }
+      // if next neighbour (*i) is scrictly lower cost than the
+      // current best, then set it to be the current best.
+      else if (val < cmin) {
         tmin = val2;
         cmin = val;
         smin = *i;
       }
-    }
+    } // end for loop
+
     n.clear();
     if( isinf(cmin) ) break;
     prev = cur;
     cur = smin;
-  }
+  } // end while loop
+
+
   path.path.push_back(s_goal);
   path.cost += cost(prev,s_goal);
   return true;
