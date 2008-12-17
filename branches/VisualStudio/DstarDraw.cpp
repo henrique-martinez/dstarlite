@@ -1,8 +1,8 @@
 /* DstarDraw.cpp
  * James Neufeld (neufeld@cs.ualberta.ca)
  */
-
-// Header stuff
+#include "Dstar.h"
+#include <iostream>
 #ifdef MACOS
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -13,14 +13,14 @@
 #include <GL/glu.h>
 #endif
 
-#include <unistd.h>
-#include "Dstar.h"
-#include "drawutils.h"
+//#include <unistd.h>
 
+
+
+#define printf(X) std::cout<<X
 
 int hh, ww;
 
-float cost = -1;
 int window; 
 Dstar *dstar;
 
@@ -28,11 +28,7 @@ int scale = 6;
 int mbutton = 0;
 int mstate = 0;
 
-
-bool b_autoreplan = true, b_examine_mode=false;
-
-// end header
-
+bool b_autoreplan = true;
 
 void InitGL(int Width, int Height)
 {
@@ -66,10 +62,9 @@ void ReSizeGLScene(int Width, int Height)
 void DrawGLScene()
 {
 
-  char str[256];
+//  usleep(100);
 
-  usleep(100);
-
+	for(int i=0;i<100000;i++);
   glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
   glLoadIdentity();
   glPushMatrix();
@@ -77,10 +72,6 @@ void DrawGLScene()
   glScaled(scale,scale,1);
 
   if (b_autoreplan) dstar->replan();
-  if (b_examine_mode) sprintf(str,"Examine Mode");
-  else sprintf(str,"Cost draw mode: %f",cost);
-
-  DisplayStr(str,GLUT_BITMAP_HELVETICA_18,1,1,1,0.01,0.92);
 
   dstar->draw();
   
@@ -89,15 +80,11 @@ void DrawGLScene()
 
 }
 
-void examine_cell(int x, int y) {
-  
-  dstar->queryCell(x,y);
-
-}
 
 void keyPressed(unsigned char key, int x, int y) 
 {
-  usleep(100);
+  //usleep(100);
+	for(int i=0;i<100000;i++);
 
   switch(key) {
   case 'q':
@@ -117,76 +104,24 @@ void keyPressed(unsigned char key, int x, int y)
   case 'C':
     dstar->init(40,50,140, 90);
     break;
-  case 'p':
-  case 'P': {
-    ds_path path = dstar->getPath();
-    printf("Path cost = %g\n", path.cost);
-    break;
   }
-  case 'e':
-  case 'E':
-    b_examine_mode = !b_examine_mode;
-    break;
-  case '=':
-  case '+':
-    if (cost > 0) cost = 1000;
-    else cost = 1;
-    break;
-  case '-':
-  case '_':
-    if (cost > 1) cost = 1;
-    else cost = -1;
-   break;
-  case '0':
-  case ')':
-    cost = -1;
-    break;
     
-  }
 }
 
-void clickCell(int x, int y) {
-
-  
-  dstar->updateCell(x, y, cost);  
-  x++;
-  dstar->updateCell(x, y, cost);  
-  y++;
-  dstar->updateCell(x, y, cost); 
-  x--;
-  dstar->updateCell(x, y, cost);  
-  x--;
-  dstar->updateCell(x, y, cost);  
-  y--;
-  dstar->updateCell(x, y, cost);  
-  y--;
-  dstar->updateCell(x, y, cost); 
-  x++;
-  dstar->updateCell(x, y, cost);  
-  x++;
-  dstar->updateCell(x, y, cost);
-  
-
-}
 void mouseFunc(int button, int state, int x, int y) {
   
   y = hh -y+scale/2;
   x += scale/2;
 
-  y /= scale;
-  x /= scale;
   mbutton = button;
 
   if ((mstate = state) == GLUT_DOWN) {
-    
-    if (b_examine_mode) {
-      examine_cell(x,y);
-    } else if (button == GLUT_LEFT_BUTTON) {
-      clickCell(x, y);
+    if (button == GLUT_LEFT_BUTTON) {
+      dstar->updateCell(x/scale, y/scale, -1);
     } else if (button == GLUT_RIGHT_BUTTON) {
-      dstar->updateStart(x, y);
+      dstar->updateStart(x/scale, y/scale);
     } else if (button == GLUT_MIDDLE_BUTTON) {
-      dstar->updateGoal(x, y);
+      dstar->updateGoal(x/scale, y/scale);
     }
   }
 }
@@ -200,10 +135,8 @@ void mouseMotionFunc(int x, int y)  {
   x /= scale;
   
   if (mstate == GLUT_DOWN) {
-    if (b_examine_mode) {
-      examine_cell(x,y);
-    } else if (mbutton == GLUT_LEFT_BUTTON) {
-      clickCell(x, y);
+    if (mbutton == GLUT_LEFT_BUTTON) {
+      dstar->updateCell(x, y, -1);
     } else if (mbutton == GLUT_RIGHT_BUTTON) {
       dstar->updateStart(x, y);
     } else if (mbutton == GLUT_MIDDLE_BUTTON) {
@@ -240,7 +173,6 @@ int main(int argc, char **argv) {
   printf("[q/Q] - Quit\n");
   printf("[r/R] - Replan\n");
   printf("[a/A] - Toggle Auto Replan\n");
-  printf("[e/E] - Toggle Examine Cell Mode\n");
   printf("[c/C] - Clear (restart)\n");
   printf("left mouse click - make cell untraversable (cost -1)\n");
   printf("middle mouse click - move goal to cell\n");
