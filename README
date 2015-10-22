@@ -2,7 +2,7 @@
 * DSTAR Class  *
 *   README     *
 ****************
-This software is an implementation of the D*-Lite algorithm as
+This software is a copy of an implementation of the D*-Lite algorithm as
 explained in [Koenig, 2002]. This is the non-optimized version as
 explained in Figure 5 of the paper. There are a few minor improvements
 that were made to this algorithm explained in section 3 below. This source is
